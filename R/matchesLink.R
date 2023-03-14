@@ -8,7 +8,7 @@
 #' @usage matchesLink(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL)
 #'
 #' @param gammalist A list of objects produced by either gammaKpar or
-#' gammaCKpar. 
+#' gammaCKpar.
 #' @param nobs.a number of observations in dataset 1
 #' @param nobs.b number of observations in dataset 2
 #' @param em parameters obtained from the Expectation-Maximization algorithm under the MAR assumption. These estimates are
@@ -59,8 +59,8 @@ matchesLink <- function(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL) {
     }
 
     ## Slicing the data:
-    n.slices1 <- max(round(as.numeric(nobs.a)/(10000), 0), 1) 
-    n.slices2 <- max(round(as.numeric(nobs.b)/(10000), 0), 1) 
+    n.slices1 <- max(round(as.numeric(nobs.a)/(10000), 0), 1)
+    n.slices2 <- max(round(as.numeric(nobs.b)/(10000), 0), 1)
     nc <- min(n.cores, n.slices1 * n.slices2)
 
     limit.1 <- round(quantile((0:nobs.a), p = seq(0, 1, 1/n.slices1)), 0)
@@ -78,7 +78,7 @@ matchesLink <- function(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL) {
     em.obj <- em.obj[order(em.obj[, "weights"]), ]
     l.t <- thresh[1]
     u.t <- thresh[2]
-    
+
     l.b <- suppressWarnings(min(em.obj$weights[em.obj$zeta.j >= l.t]))
     if(is.na(u.t)){
         u.b <- 1e10
@@ -132,7 +132,7 @@ matchesLink <- function(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL) {
     ## Run main function
     if(Sys.info()[['sysname']] == 'Darwin') {
         if (nc == 1) '%oper%' <- foreach::'%do%'
-        else { 
+        else {
             '%oper%' <- foreach::'%dopar%'
             cl <- makeCluster(nc)
             registerDoParallel(cl)
@@ -146,16 +146,16 @@ matchesLink <- function(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL) {
                        ind = as.matrix(t(ind[i, ])), listid = list.id,
                        matchesLink = TRUE, threads = 1)
       	}
-        
+
 	gammas_mat <- list()
 	for(i in 1:length(gammas)){
-            temp0 <- gammas[[i]]	
+            temp0 <- gammas[[i]]
             temp1 <- as.matrix(lapply(temp0, function(x){
                 as.matrix(data.frame(x[[1]], x[[2]]))
             }))
-            gammas_mat[[i]] <- temp1[[1]] 
+            gammas_mat[[i]] <- temp1[[1]]
         }
-	rm(temp0, temp1)	
+	rm(temp0, temp1)
 
         temp <- do.call('rbind', gammas_mat)
 
@@ -170,17 +170,18 @@ matchesLink <- function(gammalist, nobs.a, nobs.b, em, thresh, n.cores = NULL) {
         gammas_mat <- lapply(gammas, function(x){
             as.matrix(data.frame(x[[1]], x[[2]]))
         })
-        
+
         temp <- do.call('rbind', gammas_mat)
     }
-    
+
     temp <- temp + 1
-    rm(gammas, gammas_mat); gc()
+    rm(gammas, gammas_mat)
+    if (isTRUE(getOption("FL_gc")))  gc()
 
     temp <- data.frame(inds.a = temp[,1], inds.b = temp[,2])
-    
+
     class(temp) <- c("fastLink", "matchesLink")
-    
+
     return(temp)
 }
 

@@ -5,7 +5,7 @@
 #' @usage tableCounts(gammalist, nobs.a, nobs.b, n.cores)
 #'
 #' @param gammalist A list of objects produced by gammaKpar, gammaCK2par, or
-#' gammaCKpar. 
+#' gammaCKpar.
 #' @param nobs.a number of observations in dataset 1
 #' @param nobs.b number of observations in dataset 2
 #' @param n.cores Number of cores to parallelize over. Default is NULL.
@@ -37,7 +37,7 @@
 ## ------------------------
 
 tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
-    
+
     ## Lists of indices:
     ##     temp - exact
     ##     ptemp - partial
@@ -55,13 +55,13 @@ tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
     }
 
     ## Slicing the data:
-    n.slices1 <- max(round(as.numeric(nobs.a)/(10000), 0), 1) 
-    n.slices2 <- max(round(as.numeric(nobs.b)/(10000), 0), 1) 
-    
+    n.slices1 <- max(round(as.numeric(nobs.a)/(10000), 0), 1)
+    n.slices2 <- max(round(as.numeric(nobs.b)/(10000), 0), 1)
+
     if(is.null(n.cores)) {
         n.cores <- detectCores() - 1
     }
-    
+
     nc <- min(n.cores, n.slices1 * n.slices2)
 
     ## Prep objects for m_func_par
@@ -81,7 +81,7 @@ tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
     ## Run main function
     if(Sys.info()[['sysname']] == 'Darwin') {
         if (nc == 1) '%oper%' <- foreach::'%do%'
-        else { 
+        else {
             '%oper%' <- foreach::'%dopar%'
             cl <- makeCluster(nc)
             registerDoParallel(cl)
@@ -95,16 +95,16 @@ tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
                        ind = as.matrix(t(ind[i, ])), listid = rep(1, 2),
                        matchesLink = FALSE, threads = 1)
       	}
-        
+
 	gammas_mat <- list()
 	for(i in 1:length(gammas)){
-            temp0 <- gammas[[i]]	
+            temp0 <- gammas[[i]]
             temp1 <- as.matrix(lapply(temp0, function(x){
                 as.matrix(data.frame(x[[1]], x[[2]]))
             }))
-            gammas_mat[[i]] <- temp1[[1]] 
+            gammas_mat[[i]] <- temp1[[1]]
         }
-	rm(temp0, temp1)	
+	rm(temp0, temp1)
 
         temp <- do.call('rbind', gammas_mat)
 
@@ -119,11 +119,12 @@ tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
         gammas_mat <- lapply(gammas, function(x){
             as.matrix(data.frame(x[[1]], x[[2]]))
         })
-        
+
         temp <- do.call('rbind', gammas_mat)
     }
-    
-    rm(gammas); rm(gammas_mat); gc()
+
+    rm(gammas, gammas_mat)
+    if (isTRUE(getOption("FL_gc")))  gc()
 
     counts.f <- as.matrix(tapply(as.numeric(temp[, 2]), temp[, 1], sum))
     counts.d <- cbind( as.numeric(row.names(counts.f)), counts.f)
@@ -164,7 +165,7 @@ tableCounts <- function(gammalist, nobs.a, nobs.b, n.cores = NULL) {
     data.new <- data.new[data.new[, nc] > 0, ]
     class(data.new) <- c("fastLink", "tableCounts")
     return(data.new)
-    
+
 }
 
 ## ------------------------

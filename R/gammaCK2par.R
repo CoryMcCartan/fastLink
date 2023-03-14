@@ -38,7 +38,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     if(any(class(matBp) %in% c("tbl_df", "data.table"))){
         matBp <- as.data.frame(matBp)[,1]
     }
-    
+
     matAp[matAp == ""] <- NA
     matBp[matBp == ""] <- NA
 
@@ -58,7 +58,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
             stop("Invalid value provided for w. Remember, w in [0, 0.25].")
         }
     }
-    
+
     if(is.null(n.cores)) {
         n.cores <- detectCores() - 1
     }
@@ -72,8 +72,8 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     u.values.1 <- unique(matrix.1)
     u.values.2 <- unique(matrix.2)
 
-    n.slices1 <- max(round(length(u.values.1)/(10000), 0), 1) 
-    n.slices2 <- max(round(length(u.values.2)/(10000), 0), 1) 
+    n.slices1 <- max(round(length(u.values.1)/(10000), 0), 1)
+    n.slices2 <- max(round(length(u.values.2)/(10000), 0), 1)
 
     limit.1 <- round(quantile((0:nrow(u.values.2)), p = seq(0, 1, 1/n.slices2)), 0)
     limit.2 <- round(quantile((0:nrow(u.values.1)), p = seq(0, 1, 1/n.slices1)), 0)
@@ -81,7 +81,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     temp.1 <- temp.2 <- list()
 
     n.cores <- min(n.cores, n.slices1 * n.slices2)
-    
+
     for(i in 1:n.slices2) {
         temp.1[[i]] <- list(u.values.2[(limit.1[i]+1):limit.1[i+1]], limit.1[i])
     }
@@ -92,8 +92,8 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
 
     stringvec <- function(m, y, cut, strdist = method, p1 = w) {
         x <- as.matrix(m[[1]])
-        e <- as.matrix(y[[1]])        
-        
+        e <- as.matrix(y[[1]])
+
         if(strdist == "jw") {
             t <- 1 - stringdistmatrix(e, x, method = "jw", p = p1, nthread = 1)
             t[ t < cut ] <- 0
@@ -115,8 +115,9 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
             t[ t < cut ] <- 0
             t <- Matrix(t, sparse = T)
         }
-        
-        t@x[t@x >= cut] <- 2; gc()       	
+
+        t@x[t@x >= cut] <- 2
+        if (isTRUE(getOption("FL_gc")))  gc()
         slice.1 <- m[[2]]
         slice.2 <- y[[2]]
         indexes.2 <- which(t == 2, arr.ind = T)
@@ -128,7 +129,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     do <- expand.grid(1:n.slices2, 1:n.slices1)
 
     if (n.cores == 1) '%oper%' <- foreach::'%do%'
-    else { 
+    else {
         '%oper%' <- foreach::'%dopar%'
         cl <- makeCluster(n.cores)
         registerDoParallel(cl)
@@ -141,7 +142,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
         stringvec(temp.1[[r1]], temp.2[[r2]], cut.a)
     }
 
-    gc()
+    if (isTRUE(getOption("FL_gc")))  gc()
 
     reshape2 <- function(s) { s[[1]] }
     temp.2 <- lapply(temp.f, reshape2)
@@ -152,22 +153,22 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     ht2 <- new.env(hash=TRUE)
 
     n.values.2 <- as.matrix(cbind(u.values.1[indexes.2[, 1]], u.values.2[indexes.2[, 2]]))
-    
+
     if(sum(n.values.2 == "1234MF") > 0) {
       t1 <- which(n.values.2 == "1234MF", arr.ind = T)[1]
       n.values.2 <- n.values.2[-t1, ]; rm(t1)
     }
-    
+
     if(sum(n.values.2 == "9876ES") > 0) {
       t1 <- which(n.values.2 == "9876ES", arr.ind = T)[1]
       n.values.2 <- n.values.2[-t1, ]; rm(t1)
     }
-    
+
     matches.2 <- lapply(seq_len(nrow(n.values.2)), function(i) n.values.2[i, ])
 
     if(Sys.info()[['sysname']] == 'Windows') {
         if (n.cores == 1) '%oper%' <- foreach::'%do%'
-        else { 
+        else {
             '%oper%' <- foreach::'%dopar%'
             cl <- makeCluster(n.cores)
             registerDoParallel(cl)
@@ -178,7 +179,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
             ht1 <- which(matrix.1 == matches.2[[i]][[1]]); ht2 <- which(matrix.2 == matches.2[[i]][[2]])
             list(ht1, ht2)
       	  }
-        }    
+        }
     } else {
         no_cores <- n.cores
             final.list2 <- mclapply(matches.2, function(s){
@@ -186,11 +187,11 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
             list(ht1, ht2) }, mc.cores = getOption("mc.cores", no_cores))
     }
 
-    if(length(matches.2) == 0){ 
+    if(length(matches.2) == 0){
       final.list2 <- list()
-      warning("There are no identical (or nearly identical) matches. We suggest either changing the value of cut.p") 
+      warning("There are no identical (or nearly identical) matches. We suggest either changing the value of cut.p")
     }
-    
+
     na.list <- list()
     na.list[[1]] <- which(matrix.1 == "1234MF")
     na.list[[2]] <- which(matrix.2 == "9876ES")
@@ -199,7 +200,7 @@ gammaCK2par <- function(matAp, matBp, n.cores = NULL, cut.a = 0.92, method = "jw
     out[["matches2"]] <- final.list2
     out[["nas"]] <- na.list
     class(out) <- c("fastLink", "gammaCK2par")
-    
+
     return(out)
 }
 
